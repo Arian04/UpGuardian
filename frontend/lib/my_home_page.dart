@@ -222,49 +222,52 @@ class _MyHomePageState extends State<MyHomePage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // repo selector row
+            // action row
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
-                  child: Row(children: [
-                    const Icon(Icons.book, size: 18),
-                    const SizedBox(width: 8),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedRepo,
-                        dropdownColor: surface,
-                        style: TextStyle(color: textColor),
-                        items: _repos.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                        onChanged: (v) => setState(() => _selectedRepo = v ?? _selectedRepo),
-                      ),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 12),
                 ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.add), label: const Text('Create Rule')),
               ],
             ),
             const SizedBox(height: 12),
+            // side-by-side: left = list, right = details for selected change
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.all(12),
-                child: ListView.builder(
-                  itemCount: 8,
-                  itemBuilder: (context, index) {
-                    final isSelected = index == _selectedChangeIndex;
-                    return ListTile(
-                      selected: isSelected,
-                      selectedTileColor: theme.colorScheme.primary.withAlpha((0.12 * 255).round()),
-                      title: Text('Removed endpoint GET /v1/users/$index', style: TextStyle(color: textColor)),
-                      subtitle: Text('Breaking change: response schema changed', style: TextStyle(color: textColor.withAlpha((0.8 * 255).round()))),
-                      trailing: Icon(Icons.chevron_right, color: textColor),
-                      onTap: () => setState(() => _selectedChangeIndex = index),
-                    );
-                  },
-                ),
+              child: Row(
+                children: [
+                  // left: list of changes
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.all(12),
+                      child: ListView.builder(
+                        itemCount: 8,
+                        itemBuilder: (context, index) {
+                          final isSelected = index == _selectedChangeIndex;
+                          return ListTile(
+                            selected: isSelected,
+                            selectedTileColor: theme.colorScheme.primary.withAlpha((0.12 * 255).round()),
+                            title: Text('Removed endpoint GET /v1/users/$index', style: TextStyle(color: textColor)),
+                            subtitle: Text('Breaking change: response schema changed', style: TextStyle(color: textColor.withAlpha((0.8 * 255).round()))),
+                            trailing: Icon(Icons.chevron_right, color: textColor),
+                            onTap: () => setState(() => _selectedChangeIndex = index),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // right: details panel for the selected change
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.all(8),
+                      child: _buildChangeDetails(theme, textColor, _selectedChangeIndex),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -279,6 +282,72 @@ class _MyHomePageState extends State<MyHomePage> {
       default:
         return Center(child: Text('Unknown', style: theme.textTheme.titleLarge));
     }
+  }
+
+  // details panel for a selected change
+  Widget _buildChangeDetails(ThemeData theme, Color textColor, int index) {
+    // placeholder data — mirrors the list tile
+    final title = 'Removed endpoint GET /v1/users/$index';
+    final subtitle = 'Breaking change: response schema changed';
+    const oldResponse = '{\n  "id": 1,\n  "name": "Alice"\n}';
+    const newResponse = '{\n  "id": 1,\n  "fullName": "Alice Smith",\n  "active": true\n}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleLarge?.copyWith(color: textColor)),
+        const SizedBox(height: 8),
+        Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: textColor.withAlpha((0.8 * 255).round()))),
+        const SizedBox(height: 12),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Old response', style: theme.textTheme.titleMedium?.copyWith(color: textColor)),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(8)),
+                        child: SingleChildScrollView(child: Text(oldResponse, style: const TextStyle(fontFamily: 'monospace'))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('New response', style: theme.textTheme.titleMedium?.copyWith(color: textColor)),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(8)),
+                        child: SingleChildScrollView(child: Text(newResponse, style: const TextStyle(fontFamily: 'monospace'))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.check), label: const Text('Accept change')),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.close), label: const Text('Ignore')),
+          ],
+        ),
+      ],
+    );
   }
 }
 
