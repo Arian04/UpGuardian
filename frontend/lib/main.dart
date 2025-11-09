@@ -1,5 +1,8 @@
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:flutter/material.dart';
+import 'package:up_guardian/requests_page.dart';
+import 'package:up_guardian/rules_page.dart';
+import 'package:up_guardian/tests_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -58,13 +61,13 @@ class _TabBarExamplePageState extends State<TabBarExamplePage> {
           body:const TabBarView(
           children:[
             Center(
-            child:  Text("User"),
+            child: RequestsPage(),
           ),
            Center(
-            child:  Text("User"),
+            child:  TestsPage(),
            ),
           Center(
-            child: Text("User"),
+            child: RulesPage(),
           ),
           ],
           )
