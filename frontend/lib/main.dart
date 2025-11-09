@@ -72,25 +72,3 @@ class _TabBarExamplePageState extends State<TabBarExamplePage> {
       );
   }
 }
-
-class TestsPage extends StatelessWidget {
-  const TestsPage({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("Tests");
-  }
-}
-
-class RequestsPage extends StatelessWidget {
-  const RequestsPage({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("Requests");
-  }
-}
