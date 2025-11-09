@@ -15,9 +15,9 @@ class _RequestRowData {
   final TextEditingController endpointController;
   final TextEditingController methodController;
   final TextEditingController bodyController;
-  bool saved;
+  bool saved = false;
 
-  _RequestRowData({String endpoint = '', String method = '', String body = '', this.saved = false})
+  _RequestRowData({String endpoint = '', String method = '', String body = ''})
       : endpointController = TextEditingController(text: endpoint),
         methodController = TextEditingController(text: method),
         bodyController = TextEditingController(text: body);
@@ -73,6 +73,23 @@ void dispose() {
     });
   }
 
+  void removeRow(int index) {
+    if (index < 0 || index >= rows.length) return;
+    final row = rows[index];
+    final wasSaved = row.saved;
+    final values = row.values();
+    row.dispose();
+    setState(() {
+      rows.removeAt(index);
+      if (wasSaved) {
+        final found = savedRequests.indexWhere((m) =>
+            m['endpoint'] == values['endpoint'] && m['method'] == values['method'] && m['body'] == values['body']);
+        if (found != -1) savedRequests.removeAt(found);
+      }
+      if (rows.isEmpty) rows.add(_RequestRowData());
+    });
+  }
+
   void _showMissingFieldsDialog(List<String> missing) {
     final names = missing.join(', ');
     showDialog<void>(
@@ -96,6 +113,8 @@ void dispose() {
           Expanded(flex: 2, child: Text('Method', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
           Expanded(flex: 4, child: Text('Body', style: TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(width: 12),
+          SizedBox(width: 40, child: Center(child: Text(''))),
         ]),
       );
 
@@ -111,6 +130,15 @@ void dispose() {
           Expanded(flex: 2, child: Text(r.methodController.text)),
           const SizedBox(width: 12),
           Expanded(flex: 4, child: Text(r.bodyController.text)),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.delete, size: 20),
+              tooltip: 'Delete row and request',
+              onPressed: () => removeRow(index),
+            ),
+          ),
         ]),
       );
     }
@@ -148,6 +176,15 @@ void dispose() {
             onSubmitted: (_) => saveRow(index),
           ),
         ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 40,
+          child: IconButton(
+            icon: const Icon(Icons.delete, size: 20),
+            tooltip: 'Delete row and request',
+            onPressed: () => removeRow(index),
+          ),
+        ),
       ]),
     );
   }
@@ -164,32 +201,13 @@ void dispose() {
               itemBuilder: (_, i) => _buildRow(i),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.grey.shade50,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text('Saved requests: ${savedRequests.length}'),
-              if (savedRequests.isNotEmpty)
-                SizedBox(
-                  height: 60,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: savedRequests
-                        .map((s) => Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                              child: Chip(label: Text('${s['method']}: ${s['endpoint']}')),
-                            ))
-                        .toList(),
-                  ),
-                ),
-            ]),
-          ),
+          // banner removed: only FAB remains at bottom
         ]),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: addRow,
-        child: const Icon(Icons.add),
         tooltip: 'Add row',
+        child: const Icon(Icons.add),
       ),
     );
   }

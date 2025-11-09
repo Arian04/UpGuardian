@@ -20,13 +20,12 @@ class _RequestRow {
   TextEditingController endpointController;
   TextEditingController methodController;
   TextEditingController bodyController;
-  bool saved;
+  bool saved = false;
 
-  _RequestRow({String endpoint = '', String method = '', String body = '', bool saved = false})
+  _RequestRow({String endpoint = '', String method = '', String body = ''})
       : endpointController = TextEditingController(text: endpoint),
         methodController = TextEditingController(text: method),
-        bodyController = TextEditingController(text: body),
-        saved = saved;
+        bodyController = TextEditingController(text: body);
 
   Map<String, String> values() => {
         'endpoint': endpointController.text,
@@ -71,20 +70,56 @@ class _RequestsPageState extends State<RequestsPage> {
 
   void saveRow(int index) {
     final row = rows[index];
-    if (row.endpointController.text.trim().isEmpty &&
-        row.methodController.text.trim().isEmpty &&
-        row.bodyController.text.trim().isEmpty) {
-      // don't save empty rows; just mark as saved to avoid duplicate saves
-      setState(() => row.saved = true);
+    final missing = <String>[];
+    if (row.endpointController.text.trim().isEmpty) missing.add('Endpoint');
+    if (row.methodController.text.trim().isEmpty) missing.add('Method');
+    if (row.bodyController.text.trim().isEmpty) missing.add('Body');
+
+    if (missing.isNotEmpty) {
+      _showMissingFieldsDialog(missing);
       return;
     }
 
-    final map = row.values();
     setState(() {
-      savedRequests.add(map);
+      savedRequests.add(row.values());
       row.saved = true;
     });
   }
+
+  void _showMissingFieldsDialog(List<String> missing) {
+    final names = missing.join(', ');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Missing input'),
+        content: Text('Please enter values for the following field(s): $names'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  void removeRow(int index) {
+    if (index < 0 || index >= rows.length) return;
+    final row = rows[index];
+    final wasSaved = row.saved;
+    final values = row.values();
+    // Dispose controllers for that row
+    row.dispose();
+    setState(() {
+      rows.removeAt(index);
+      if (wasSaved) {
+        // remove first matching saved request (match by values)
+        final found = savedRequests.indexWhere((m) =>
+            m['endpoint'] == values['endpoint'] && m['method'] == values['method'] && m['body'] == values['body']);
+        if (found != -1) savedRequests.removeAt(found);
+      }
+      // keep at least one editable row so UI stays usable
+      if (rows.isEmpty) rows.add(_RequestRow());
+    });
+  }
+  // (Only removeRow exists now — it deletes both the row and the saved request if present.)
 
   Widget _buildHeader() {
     return Container(
@@ -97,6 +132,8 @@ class _RequestsPageState extends State<RequestsPage> {
           Expanded(flex: 2, child: Text('Method', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
           Expanded(flex: 4, child: Text('Body', style: TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(width: 12),
+          SizedBox(width: 40, child: Center(child: Text(''))),
         ],
       ),
     );
@@ -115,6 +152,15 @@ class _RequestsPageState extends State<RequestsPage> {
           Expanded(flex: 2, child: Text(r.methodController.text)),
           const SizedBox(width: 12),
           Expanded(flex: 4, child: Text(r.bodyController.text)),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.delete, size: 20),
+              tooltip: 'Delete row and request',
+              onPressed: () => removeRow(index),
+            ),
+          ),
         ]),
       );
     }
@@ -153,6 +199,15 @@ class _RequestsPageState extends State<RequestsPage> {
             onSubmitted: (_) => saveRow(index),
           ),
         ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 40,
+          child: IconButton(
+            icon: const Icon(Icons.delete, size: 20),
+            tooltip: 'Delete row and request',
+            onPressed: () => removeRow(index),
+          ),
+        ),
       ]),
     );
   }
@@ -170,35 +225,14 @@ class _RequestsPageState extends State<RequestsPage> {
                 itemBuilder: (_, i) => _buildRow(i),
               ),
             ),
-            // small footer showing saved variables for debugging / visibility
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.grey.shade50,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Saved requests: ${savedRequests.length}'),
-                  if (savedRequests.isNotEmpty)
-                    SizedBox(
-                      height: 60,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: savedRequests.map((s) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Chip(label: Text('${s['method']}: ${s['endpoint']}')),
-                        )).toList(),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            // banner removed: only FAB remains at bottom
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: addRow,
-        child: const Icon(Icons.add),
         tooltip: 'Add row',
+        child: const Icon(Icons.add),
       ),
     );
   }

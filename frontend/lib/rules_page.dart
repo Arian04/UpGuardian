@@ -13,13 +13,6 @@ class RulesPage extends StatelessWidget {
         labelText: 'Custom Rules',
       ),
     );
-    return TextField(
-      controller: _controller,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        labelText: 'Custom Rules',
-      ),
-    );
   }
 }
 
