@@ -23,10 +23,10 @@ class Service:
         # profile may be None for legacy/unknown profile entries
         self.profile = profile
 
-    async def get_endpoint(self) -> Optional[str]:
+    async def get_old_endpoint(self) -> Optional[str]:
         def _get():
             cur = self._conn.execute(
-                "SELECT endpoint FROM services WHERE id = ?",
+                "SELECT old_endpoint FROM services WHERE id = ?",
                 (self.id,),
             )
             row = cur.fetchone()
@@ -34,19 +34,45 @@ class Service:
 
         return await asyncio.to_thread(_get)
 
-    async def set_endpoint(self, endpoint: str) -> None:
+    async def set_old_endpoint(self, endpoint: Optional[str]) -> None:
         def _set():
             # Update by integer id
             cur = self._conn.execute(
-                "UPDATE services SET endpoint = ? WHERE id = ?",
+                "UPDATE services SET old_endpoint = ? WHERE id = ?",
                 (endpoint, self.id),
             )
             if cur.rowcount == 0:
-                # If the row does not exist, insert a new row with the known
-                # name and profile. This will create a new integer id; the
-                # Service instance's id will not be updated in this case.
+                # Insert if missing
                 self._conn.execute(
-                    "INSERT INTO services(profile, name, endpoint) VALUES(?, ?, ?)",
+                    "INSERT INTO services(profile, name, old_endpoint) VALUES(?, ?, ?)",
+                    (self.profile, self.name, endpoint),
+                )
+            self._conn.commit()
+
+        await asyncio.to_thread(_set)
+
+    async def get_new_endpoint(self) -> Optional[str]:
+        def _get():
+            cur = self._conn.execute(
+                "SELECT new_endpoint FROM services WHERE id = ?",
+                (self.id,),
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
+        return await asyncio.to_thread(_get)
+
+    async def set_new_endpoint(self, endpoint: Optional[str]) -> None:
+        def _set():
+            # Update by integer id
+            cur = self._conn.execute(
+                "UPDATE services SET new_endpoint = ? WHERE id = ?",
+                (endpoint, self.id),
+            )
+            if cur.rowcount == 0:
+                # Insert if missing
+                self._conn.execute(
+                    "INSERT INTO services(profile, name, new_endpoint) VALUES(?, ?, ?)",
                     (self.profile, self.name, endpoint),
                 )
             self._conn.commit()

@@ -9,8 +9,8 @@ from .request import Request
 class UpGuardianSQLiteDB:
     """Encapsulates sqlite3 access and provides async helpers.
 
-    The DB stores a `services` table with columns: profile, id (TEXT), endpoint (TEXT)
-    and PRIMARY KEY(profile, id) because ids are unique only within a profile.
+        The DB stores a `services` table with columns: id (INTEGER PK), profile, name,
+        old_endpoint and new_endpoint. Services are unique per (profile, name).
     """
 
     def __init__(self, conn: sqlite3.Connection):
@@ -25,7 +25,8 @@ class UpGuardianSQLiteDB:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 profile TEXT,
                 name TEXT,
-                endpoint TEXT,
+                old_endpoint TEXT,
+                new_endpoint TEXT,
                 UNIQUE(profile, name)
             )
             """
@@ -52,9 +53,8 @@ class UpGuardianSQLiteDB:
 
         def _fetch():
             if profile is None:
-                cur = self._conn.execute("SELECT profile, id FROM services")
-                rows = cur.fetchall()
-                return [(row[0], row[1]) for row in rows]
+                cur = self._conn.execute("SELECT id, name, profile FROM services")
+                return cur.fetchall()
             else:
                 cur = self._conn.execute(
                     "SELECT id, name, profile FROM services WHERE profile = ?", (profile,)
@@ -64,23 +64,23 @@ class UpGuardianSQLiteDB:
         rows = await asyncio.to_thread(_fetch)
         return [Service(self._conn, id, name, prof) for id, name, prof in rows]
 
-    async def createService(self, profile: Optional[str], name: str, endpoint: str) -> Service:
+    async def createService(self, profile: Optional[str], name: str, old_endpoint: Optional[str] = None, new_endpoint: Optional[str] = None) -> Service:
         """Create or update a service row (by profile+name) and return a Service.
 
         Returns a Service instance with the integer primary key `id`.
         """
 
         def _upsert():
-            # Try update first
+            # Try update first; set both endpoint columns (may be NULL)
             cur = self._conn.execute(
-                "UPDATE services SET endpoint = ? WHERE profile IS ? AND name = ?",
-                (endpoint, profile, name),
+                "UPDATE services SET old_endpoint = ?, new_endpoint = ? WHERE profile IS ? AND name = ?",
+                (old_endpoint, new_endpoint, profile, name),
             )
             rowid = None
             if cur.rowcount == 0:
                 ins = self._conn.execute(
-                    "INSERT INTO services(profile, name, endpoint) VALUES(?, ?, ?)",
-                    (profile, name, endpoint),
+                    "INSERT INTO services(profile, name, old_endpoint, new_endpoint) VALUES(?, ?, ?, ?)",
+                    (profile, name, old_endpoint, new_endpoint),
                 )
                 rowid = ins.lastrowid
             else:

@@ -84,9 +84,10 @@ async def list_services(profile: str):
     services = await db_manager.getServices(profile)
 
     async def _get(svc: Service):
-        endpoint = await svc.get_endpoint()
+        old_endpoint = await svc.get_old_endpoint()
+        new_endpoint = await svc.get_new_endpoint()
         name = await svc.get_name()
-        return {"id": svc.id, "name": name, "endpoint": endpoint}
+        return {"id": svc.id, "name": name, "old_endpoint": old_endpoint, "new_endpoint": new_endpoint}
 
     results = await asyncio.gather(*[_get(s) for s in services])
     return list(results)
@@ -96,18 +97,22 @@ async def list_services(profile: str):
 async def create_service_for_profile(profile: str, body: dict):
     """Create a new service for the given profile.
 
-    Expected JSON body: {"name": <str>, "endpoint": <str>}
+    Expected JSON body: {"name": <str>, "old_endpoint": <str>, "new_endpoint": <str>}
+    The legacy key `endpoint` is also accepted and will populate `old_endpoint`.
     """
     name = body.get("name")
-    endpoint = body.get("endpoint")
-    if not name or not endpoint:
-        return fastapi.responses.JSONResponse({"error": "name and endpoint are required"}, status_code=400)
+    if not name:
+        return fastapi.responses.JSONResponse({"error": "name is required"}, status_code=400)
+
+    old_endpoint = body.get("old_endpoint")
+    new_endpoint = body.get("new_endpoint")
 
     db_manager: UpGuardianSQLiteDB = app.state.db_manager
-    svc = await db_manager.createService(profile, name, endpoint)
+    svc = await db_manager.createService(profile, name, old_endpoint=old_endpoint, new_endpoint=new_endpoint)
     current_name = await svc.get_name()
-    current_endpoint = await svc.get_endpoint()
-    return {"id": svc.id, "name": current_name, "endpoint": current_endpoint, "profile": svc.profile}
+    current_old = await svc.get_old_endpoint()
+    current_new = await svc.get_new_endpoint()
+    return {"id": svc.id, "name": current_name, "old_endpoint": current_old, "new_endpoint": current_new, "profile": svc.profile}
 
 
 @app.put("/services/{service_id}")
@@ -119,19 +124,23 @@ async def put_service(service_id: str, body: dict):
     `profile` so it can be replaced later with a different resolution.
     """
     profile = body.get("profile")
-    endpoint = body.get("endpoint")
-    if endpoint is None:
-        return fastapi.responses.JSONResponse(
-            {"error": "endpoint is required"}, status_code=400
-        )
+    old_endpoint = body.get("old_endpoint")
+    new_endpoint = body.get("new_endpoint")
+    if old_endpoint is None and new_endpoint is None and body.get("endpoint") is None:
+        return fastapi.responses.JSONResponse({"error": "old_endpoint or new_endpoint (or endpoint) is required"}, status_code=400)
+
+    # Prefer explicit old/new; accept legacy `endpoint` as old_endpoint
+    if old_endpoint is None and body.get("endpoint") is not None:
+        old_endpoint = body.get("endpoint")
 
     db_manager: UpGuardianSQLiteDB = app.state.db_manager
-    service = await db_manager.createService(profile, service_id, endpoint)
+    service = await db_manager.createService(profile, service_id, old_endpoint=old_endpoint, new_endpoint=new_endpoint)
 
     # read back endpoint and name to confirm
-    current_endpoint = await service.get_endpoint()
+    current_old = await service.get_old_endpoint()
+    current_new = await service.get_new_endpoint()
     current_name = await service.get_name()
-    return {"id": service.id, "name": current_name, "endpoint": current_endpoint, "profile": service.profile}
+    return {"id": service.id, "name": current_name, "old_endpoint": current_old, "new_endpoint": current_new, "profile": service.profile}
 
 
 @app.post("/services/{service_id}/requests")
