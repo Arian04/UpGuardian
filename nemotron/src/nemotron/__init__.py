@@ -23,8 +23,8 @@ def main():
     json_schema = OutputSchemaResponse.model_json_schema()
 
     prompt = (
-        "You are a developer checking for breaking changes after upgrading an API server. Compare the following API responses from different versions of the same API server."
-        "List which keys do not indicate breaking changes."
+        "You are a developer checking for breaking changes after upgrading an API server. You are given two API responses: one from an older version of the API, and another from an upgraded version. Compare the response schemas to detect breaking changes."
+        "List which keys are unchanged in the new schema."
     )
 
     api_response_1 = {
@@ -35,17 +35,26 @@ def main():
         "created_at": "2025-11-09T02:07:10.131782",
         "last_login_at": "2025-11-09T02:07:10.131787"
     }
+    # api_response_2 = {
+    #     "id": "0",
+    #     "first_name": "john",
+    #     "middle_name": "",
+    #     "last_name": "doe",
+    #     "street_address": "1111 SomePlace Lane",
+    #     "created_at": "2025-11-09T03:26:07.728452",
+    #     "last_login_at": "2025-11-09T03:26:07.728456"
+    # }
     api_response_2 = {
         "id": "0",
         "first_name": "john",
         "last_name": "doe",
         "address": {
-        "street_address": "1111 SomePlace Lane",
-        "city": "dallas",
-        "zip_code": 75080
+            "street_address": "1111 SomePlace Lane",
+            "city": "dallas",
+            "zip_code": 75080,
         },
         "created_at": "2025-11-09T02:09:10.062655",
-        "last_login_at": "2025-11-09T02:09:10.062660"
+        "last_login_at": "2025-11-09T02:09:10.062660",
     }
 
     messages = [
