@@ -303,18 +303,21 @@ async def run_tests_helper(service_id: int, db_manager: UpGuardianSQLiteDB):
     }
 
 def analyze_responses(response1: dict, response2: dict) -> bool:
-    if response1 == response2:
-        return True
+    try:
+        if response1 == response2:
+            return True
 
-    unimportant_keys = json.loads(get_unimportant_keys_nemotron())["unimportant_keys"]
-    for key in unimportant_keys:
-        if key in response1:
-            del response1[key]
+        unimportant_keys = json.loads(get_unimportant_keys_nemotron(response1, response2))["unimportant_keys"]
+        for key in unimportant_keys:
+            if key in response1:
+                del response1[key]
 
-        if key in response2:
-            del response2[key]
+            if key in response2:
+                del response2[key]
 
-    if response1 == response2:
-        return True
+        if response1 == response2:
+            return True
+    except Exception:
+        return False
 
     return False

@@ -19,7 +19,7 @@ class OutputSchemaResponse(BaseModel):
     unimportant_keys: list[str]
 
 
-def get_unimportant_keys_nemotron():
+def get_unimportant_keys_nemotron(api_response_1, api_response_2):
     json_schema = OutputSchemaResponse.model_json_schema()
 
     prompt = (
@@ -27,14 +27,14 @@ def get_unimportant_keys_nemotron():
         "List which keys are unchanged in the new schema."
     )
 
-    api_response_1 = {
-        "id": "0",
-        "first_name": "john",
-        "last_name": "doe",
-        "street_address": "1111 SomePlace Lane",
-        "created_at": "2025-11-09T02:07:10.131782",
-        "last_login_at": "2025-11-09T02:07:10.131787"
-    }
+    # api_response_1 = {
+    #     "id": "0",
+    #     "first_name": "john",
+    #     "last_name": "doe",
+    #     "street_address": "1111 SomePlace Lane",
+    #     "created_at": "2025-11-09T02:07:10.131782",
+    #     "last_login_at": "2025-11-09T02:07:10.131787"
+    # }
     # api_response_2 = {
     #     "id": "0",
     #     "first_name": "john",
@@ -44,18 +44,6 @@ def get_unimportant_keys_nemotron():
     #     "created_at": "2025-11-09T03:26:07.728452",
     #     "last_login_at": "2025-11-09T03:26:07.728456"
     # }
-    api_response_2 = {
-        "id": "0",
-        "first_name": "john",
-        "last_name": "doe",
-        "address": {
-            "street_address": "1111 SomePlace Lane",
-            "city": "dallas",
-            "zip_code": 75080,
-        },
-        "created_at": "2025-11-09T02:09:10.062655",
-        "last_login_at": "2025-11-09T02:09:10.062660",
-    }
 
     messages = [
         # system prompts
