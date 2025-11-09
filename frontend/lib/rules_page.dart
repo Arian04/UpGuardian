@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+
 
 /// Rules page with a 2-column table: Name | Expression
 ///
@@ -8,6 +10,17 @@ import 'package:flutter/material.dart';
 ///   corresponding entry from `savedRules` (matching by name+expression).
 class RulesPage extends StatefulWidget {
   const RulesPage({super.key});
+
+  /// Utility: validate whether a given string is valid JSON (object or array).
+  /// Returns true when the input parses to a Map or List; false otherwise.
+  static bool checkJsonFormat(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString);
+      return decoded is Map<String, dynamic> || decoded is List<dynamic>;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   State<RulesPage> createState() => _RulesPageState();
@@ -199,3 +212,6 @@ class _RulesPageState extends State<RulesPage> {
   }
 }
 
+bool checkJsonFormat(String jsonString) {
+  return RulesPage.checkJsonFormat(jsonString);
+}

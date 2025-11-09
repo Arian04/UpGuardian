@@ -21,22 +21,19 @@ class _MyHomePageState extends State<MyHomePage> {
   String _selectedRepo = 'arian04/upguardian';
 
   // Controllers for landing page inputs
-  final TextEditingController _oldServiceController = TextEditingController();
+  final TextEditingController _serviceController = TextEditingController();
   final TextEditingController _oldEndpointController = TextEditingController();
-  final TextEditingController _newServiceController = TextEditingController();
   final TextEditingController _newEndpointController = TextEditingController();
 
   // Temporary variables to store input
-  String oldService = '';
+  String service = '';
   String oldEndpoint = '';
-  String newService = '';
   String newEndpoint = '';
 
   @override
   void dispose() {
-    _oldServiceController.dispose();
+    _serviceController.dispose();
     _oldEndpointController.dispose();
-    _newServiceController.dispose();
     _newEndpointController.dispose();
     super.dispose();
   }
@@ -159,12 +156,12 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 Text('API Change Landing', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 18),
-                Text('Old Service', style: inputStyle),
+                Text('Service', style: inputStyle),
                 const SizedBox(height: 6),
                 TextField(
-                  controller: _oldServiceController,
+                  controller: _serviceController,
                   decoration: const InputDecoration(
-                    hintText: 'Enter old service name',
+                    hintText: 'Enter service name',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -179,16 +176,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Text('New Service', style: inputStyle),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _newServiceController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter new service name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 Text('New Endpoint', style: inputStyle),
                 const SizedBox(height: 6),
                 TextField(
@@ -201,11 +188,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    oldService = _oldServiceController.text.trim();
+                    service = _serviceController.text.trim();
                     oldEndpoint = _oldEndpointController.text.trim();
-                    newService = _newServiceController.text.trim();
                     newEndpoint = _newEndpointController.text.trim();
-                    if (oldService.isEmpty || oldEndpoint.isEmpty || newService.isEmpty || newEndpoint.isEmpty) {
+                    if (service.isEmpty || oldEndpoint.isEmpty || newEndpoint.isEmpty) {
                       _showAlert('All fields are required. Please fill out every field.');
                       return;
                     }
