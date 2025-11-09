@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// A page that shows a scalable 3-column table (Endpoint, Method, Body).
+/// A page that shows a scalable 5-column table (Endpoints, Methods, Body, Old Response, New Response).
 ///
-/// - Each row contains three editable fields (TextFields).
+/// - Each row contains five editable fields (TextFields).
 /// - Pressing Enter (submit) on any field will "save" that row: the values
 ///   are stored and the row becomes read-only text.
 /// - The "+" button adds another editable row to the table.
@@ -20,23 +20,31 @@ class _RequestRow {
   TextEditingController endpointController;
   TextEditingController methodController;
   TextEditingController bodyController;
+  TextEditingController oldResponseController;
+  TextEditingController newResponseController;
   bool saved = false;
 
-  _RequestRow({String endpoint = '', String method = '', String body = ''})
+  _RequestRow({String endpoint = '', String method = '', String body = '', String oldResponse = '', String newResponse = ''})
       : endpointController = TextEditingController(text: endpoint),
         methodController = TextEditingController(text: method),
-        bodyController = TextEditingController(text: body);
+        bodyController = TextEditingController(text: body),
+        oldResponseController = TextEditingController(text: oldResponse),
+        newResponseController = TextEditingController(text: newResponse);
 
   Map<String, String> values() => {
         'endpoint': endpointController.text,
         'method': methodController.text,
         'body': bodyController.text,
+        'oldResponse': oldResponseController.text,
+        'newResponse': newResponseController.text,
       };
 
   void dispose() {
     endpointController.dispose();
     methodController.dispose();
     bodyController.dispose();
+    oldResponseController.dispose();
+    newResponseController.dispose();
   }
 }
 
@@ -44,7 +52,7 @@ class _RequestsPageState extends State<RequestsPage> {
   // dynamic list of editable rows (controllers live here)
   final List<_RequestRow> rows = [];
 
-  // saved requests: each entry is a map with keys: endpoint, method, body
+  // saved requests: each entry is a map with keys: endpoint, method, body, oldResponse, newResponse
   final List<Map<String, String>> savedRequests = [];
 
   @override
@@ -73,7 +81,9 @@ class _RequestsPageState extends State<RequestsPage> {
     final missing = <String>[];
     if (row.endpointController.text.trim().isEmpty) missing.add('Endpoint');
     if (row.methodController.text.trim().isEmpty) missing.add('Method');
-    if (row.bodyController.text.trim().isEmpty) missing.add('Body');
+    // Body is optional for requests table (same behaviour as rules table)
+    if (row.oldResponseController.text.trim().isEmpty) missing.add('Old Response');
+    if (row.newResponseController.text.trim().isEmpty) missing.add('New Response');
 
     if (missing.isNotEmpty) {
       _showMissingFieldsDialog(missing);
@@ -112,7 +122,10 @@ class _RequestsPageState extends State<RequestsPage> {
       if (wasSaved) {
         // remove first matching saved request (match by values)
         final found = savedRequests.indexWhere((m) =>
-            m['endpoint'] == values['endpoint'] && m['method'] == values['method'] && m['body'] == values['body']);
+            m['endpoint'] == values['endpoint'] &&
+            m['method'] == values['method'] &&
+            m['oldResponse'] == values['oldResponse'] &&
+            m['newResponse'] == values['newResponse']);
         if (found != -1) savedRequests.removeAt(found);
       }
       // keep at least one editable row so UI stays usable
@@ -131,7 +144,11 @@ class _RequestsPageState extends State<RequestsPage> {
           SizedBox(width: 12),
           Expanded(flex: 2, child: Text('Method', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
-          Expanded(flex: 4, child: Text('Body', style: TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(flex: 3, child: Text('Body', style: TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(width: 12),
+          Expanded(flex: 3, child: Text('Old Response', style: TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(width: 12),
+          Expanded(flex: 3, child: Text('New Response', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
           SizedBox(width: 40, child: Center(child: Text(''))),
         ],
@@ -151,7 +168,11 @@ class _RequestsPageState extends State<RequestsPage> {
           const SizedBox(width: 12),
           Expanded(flex: 2, child: Text(r.methodController.text)),
           const SizedBox(width: 12),
-          Expanded(flex: 4, child: Text(r.bodyController.text)),
+          Expanded(flex: 3, child: Text(r.bodyController.text)),
+          const SizedBox(width: 12),
+          Expanded(flex: 3, child: Text(r.oldResponseController.text)),
+          const SizedBox(width: 12),
+          Expanded(flex: 3, child: Text(r.newResponseController.text)),
           const SizedBox(width: 12),
           SizedBox(
             width: 40,
@@ -191,10 +212,30 @@ class _RequestsPageState extends State<RequestsPage> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          flex: 4,
+          flex: 3,
           child: TextField(
             controller: r.bodyController,
-            decoration: const InputDecoration(hintText: 'Request body'),
+            decoration: const InputDecoration(hintText: 'Request body (optional)'),
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => saveRow(index),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: TextField(
+            controller: r.oldResponseController,
+            decoration: const InputDecoration(hintText: 'Old response'),
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => saveRow(index),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: TextField(
+            controller: r.newResponseController,
+            decoration: const InputDecoration(hintText: 'New response'),
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => saveRow(index),
           ),
