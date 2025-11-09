@@ -1,6 +1,9 @@
 import asyncio
 import sqlite3
 from typing import Optional
+from typing import List
+
+from .request import Request
 
 
 class Service:
@@ -49,3 +52,29 @@ class Service:
             self._conn.commit()
 
         await asyncio.to_thread(_set)
+
+    async def get_name(self) -> Optional[str]:
+        def _get():
+            cur = self._conn.execute("SELECT name FROM services WHERE id = ?", (self.id,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+        return await asyncio.to_thread(_get)
+
+    async def set_name(self, name: str) -> None:
+        def _set():
+            self._conn.execute("UPDATE services SET name = ? WHERE id = ?", (name, self.id))
+            self._conn.commit()
+
+        await asyncio.to_thread(_set)
+
+    async def list_requests(self) -> List[Request]:
+        """Return Request objects that belong to this service (by integer id)."""
+
+        def _fetch():
+            cur = self._conn.execute("SELECT id FROM requests WHERE service = ?", (self.id,))
+            rows = cur.fetchall()
+            return [row[0] for row in rows]
+
+        ids = await asyncio.to_thread(_fetch)
+        return [Request(self._conn, int(i)) for i in ids]

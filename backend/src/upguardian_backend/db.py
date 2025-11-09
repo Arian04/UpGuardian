@@ -3,6 +3,7 @@ import sqlite3
 from typing import List, Optional
 
 from .service import Service
+from .request import Request
 
 
 class UpGuardianSQLiteDB:
@@ -29,13 +30,16 @@ class UpGuardianSQLiteDB:
             )
             """
         )
-        # Keep the kv table as previously defined for other storage.
+        # Requests table stores individual HTTP requests tied to a service
         self._conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS kv (
+            CREATE TABLE IF NOT EXISTS requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                key TEXT UNIQUE NOT NULL,
-                value TEXT
+                service INTEGER NOT NULL,
+                endpoint TEXT NOT NULL,
+                method TEXT NOT NULL,
+                body TEXT,
+                FOREIGN KEY(service) REFERENCES services(id) ON DELETE CASCADE
             )
             """
         )
@@ -92,3 +96,48 @@ class UpGuardianSQLiteDB:
         if rowid is None:
             raise RuntimeError("Failed to create or locate service row")
         return Service(self._conn, rowid, name, profile)
+
+    # --- Request-related DB helpers ---------------------------------
+    async def create_request(self, service_id: int, endpoint: str, method: str, body: Optional[str] = None) -> Request:
+        """Insert a new request row and return a Request object."""
+
+        def _insert():
+            cur = self._conn.execute(
+                "INSERT INTO requests(service, endpoint, method, body) VALUES(?, ?, ?, ?)",
+                (service_id, endpoint, method, body),
+            )
+            self._conn.commit()
+            return cur.lastrowid
+
+        rowid = await asyncio.to_thread(_insert)
+        return Request(self._conn, int(rowid))
+
+    async def get_service_by_id(self, service_id: int) -> Optional[Service]:
+        def _get():
+            cur = self._conn.execute("SELECT id, name, profile FROM services WHERE id = ?", (service_id,))
+            return cur.fetchone()
+
+        row = await asyncio.to_thread(_get)
+        if not row:
+            return None
+        return Service(self._conn, int(row[0]), row[1], row[2])
+
+    async def get_request(self, request_id: int) -> Optional[Request]:
+        def _get():
+            cur = self._conn.execute(
+                "SELECT id FROM requests WHERE id = ?", (request_id,)
+            )
+            return cur.fetchone()
+
+        row = await asyncio.to_thread(_get)
+        if not row:
+            return None
+        return Request(self._conn, int(row[0]))
+
+    async def delete_request(self, request_id: int) -> bool:
+        def _delete():
+            cur = self._conn.execute("DELETE FROM requests WHERE id = ?", (request_id,))
+            self._conn.commit()
+            return cur.rowcount > 0
+
+        return await asyncio.to_thread(_delete)
