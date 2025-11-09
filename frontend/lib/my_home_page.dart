@@ -16,6 +16,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // repository list removed (not used)
 
+  // Mock services listing (mutable contents)
+  final List<Map<String, String>> _mockServices = [
+    {'name': 'User Service', 'oldEndpoint': '/v1/users', 'newEndpoint': '/v2/users'},
+    {'name': 'Auth Service', 'oldEndpoint': '/v1/auth', 'newEndpoint': '/v2/auth'},
+    {'name': 'Billing Service', 'oldEndpoint': '/v1/billing', 'newEndpoint': '/v2/billing'},
+  ];
+
   // Controllers for landing page inputs
   final TextEditingController _serviceController = TextEditingController();
   final TextEditingController _oldEndpointController = TextEditingController();
@@ -47,6 +54,79 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openAddServiceDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => _buildAddServiceDialog(),
+    );
+  }
+
+  Widget _buildAddServiceDialog() {
+    return AlertDialog(
+      title: const Text('Add Service'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 4),
+            const Text('Service'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _serviceController,
+              decoration: const InputDecoration(
+                hintText: 'Enter service name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('Old Endpoint'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _oldEndpointController,
+              decoration: const InputDecoration(
+                hintText: 'Enter old endpoint (e.g. /v1/users)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('New Endpoint'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _newEndpointController,
+              decoration: const InputDecoration(
+                hintText: 'Enter new endpoint (e.g. /v2/users)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () {
+            final enteredService = _serviceController.text.trim();
+            final enteredOld = _oldEndpointController.text.trim();
+            final enteredNew = _newEndpointController.text.trim();
+            if (enteredService.isEmpty || enteredOld.isEmpty || enteredNew.isEmpty) {
+              _showAlert('Service name, old endpoint and new endpoint are all required.');
+              return;
+            }
+            setState(() {
+              _mockServices.insert(0, {'name': enteredService, 'oldEndpoint': enteredOld, 'newEndpoint': enteredNew});
+            });
+            _serviceController.clear();
+            _oldEndpointController.clear();
+            _newEndpointController.clear();
+            Navigator.of(context).pop();
+          },
+          child: const Text('Add'),
+        ),
+      ],
     );
   }
 
@@ -135,69 +215,50 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildMainContent(ThemeData theme, Color textColor, Color surface) {
     switch (_selectedIndex) {
       case 0:
-        // Landing page: input for old/new service and endpoint
-        final inputStyle = theme.textTheme.bodyLarge?.copyWith(color: textColor);
-        return Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+        // Overview: list of known services and a button to add a new one (opens modal)
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('API Change Landing', style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 18),
-                Text('Service', style: inputStyle),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _serviceController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter service name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text('Old Endpoint', style: inputStyle),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _oldEndpointController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter old endpoint (e.g. /v1/users)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text('New Endpoint', style: inputStyle),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _newEndpointController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter new endpoint (e.g. /v2/users)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    service = _serviceController.text.trim();
-                    oldEndpoint = _oldEndpointController.text.trim();
-                    newEndpoint = _newEndpointController.text.trim();
-                    if (service.isEmpty || oldEndpoint.isEmpty || newEndpoint.isEmpty) {
-                      _showAlert('All fields are required. Please fill out every field.');
-                      return;
-                    }
-                    // You can use the variables here for further logic
-                  },
-                  child: const Text('Submit'),
+                Text('Services', style: theme.textTheme.headlineSmall),
+                ElevatedButton.icon(
+                  onPressed: _openAddServiceDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Service'),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
+                child: _mockServices.isEmpty
+                    ? Center(child: Text('No services yet. Click "Add Service" to create one.', style: theme.textTheme.bodyLarge))
+                    : ListView.builder(
+                        itemCount: _mockServices.length,
+                        itemBuilder: (context, index) {
+                          final svc = _mockServices[index];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                            child: ListTile(
+                              title: Text(svc['name'] ?? ''),
+                              subtitle: Text('${svc['oldEndpoint'] ?? ''} → ${svc['newEndpoint'] ?? ''}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () {
+                                  setState(() => _mockServices.removeAt(index));
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ],
         );
       case 1:
         // simplified API Changes view (keeps repo selector and a change list)
