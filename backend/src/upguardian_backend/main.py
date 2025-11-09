@@ -1,4 +1,3 @@
-import logging
 
 import fastapi
 import sqlite3
@@ -25,13 +24,7 @@ app: FastAPI = fastapi.FastAPI()
 # Database file placed at the repository root (two parents up from this file)
 DB_PATH = Path(__file__).resolve().parents[2] / "upguardian.db"
 
-@app.on_event("startup")
-def startup():
-    """Open DB connection and (optionally) fetch JWKS from Auth0.
-
-    The JWKS fetch is only attempted if AUTH0_DOMAIN is configured. The
-    fetched JWKS is stored in `app.state.jwks` for use by the JWT verifier.
-    """
+def init_db() -> UpGuardianSQLiteDB:
     # Ensure parent directory exists (usually it will)
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -46,6 +39,17 @@ def startup():
     db_manager = UpGuardianSQLiteDB(conn)
     db_manager.ensure_tables()
     app.state.db_manager = db_manager
+
+    return db_manager
+
+@app.on_event("startup")
+def startup():
+    """Open DB connection and (optionally) fetch JWKS from Auth0.
+
+    The JWKS fetch is only attempted if AUTH0_DOMAIN is configured. The
+    fetched JWKS is stored in `app.state.jwks` for use by the JWT verifier.
+    """
+    init_db()
 
     # If Auth0 domain is set, prepare a PyJWKClient to fetch JWKs on demand.
     if AUTH0_DOMAIN:
@@ -230,6 +234,9 @@ class TestResponse(BaseModel):
 @app.put("/run/{service_id}")
 async def run_tests(service_id: int):
     db_manager: UpGuardianSQLiteDB = app.state.db_manager
+    return await run_tests_helper(service_id, db_manager)
+
+async def run_tests_helper(service_id: int, db_manager: UpGuardianSQLiteDB):
     service = await db_manager.get_service_by_id(service_id)
     if not service:
         return fastapi.responses.JSONResponse({"error": "service not found"}, status_code=404)
@@ -243,10 +250,6 @@ async def run_tests(service_id: int):
         service_endpoint2 = await service.get_new_endpoint()
         request_endpoint = await request.get_endpoint()
         request_data = await request.get_body()
-
-        logging.error(service_endpoint1 + request_endpoint)
-        logging.error(service_endpoint2 + request_endpoint)
-        logging.error(request_data)
 
         response1 = httpx.request(
             method=await request.get_method(),
