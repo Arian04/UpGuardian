@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'api/services.dart';
+import 'api/database.dart';
 import 'rules_page.dart';
 import 'requests_page.dart';
 
@@ -16,12 +18,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // repository list removed (not used)
 
-  // Mock services listing (mutable contents)
-  final List<Map<String, String>> _mockServices = [
-    {'name': 'User Service', 'oldEndpoint': '/v1/users', 'newEndpoint': '/v2/users'},
-    {'name': 'Auth Service', 'oldEndpoint': '/v1/auth', 'newEndpoint': '/v2/auth'},
-    {'name': 'Billing Service', 'oldEndpoint': '/v1/billing', 'newEndpoint': '/v2/billing'},
-  ];
+  // Services loaded from the API
+  final List<Service> _services = [];
+  // which service is currently active (index into _services). -1 means none selected
+  int _selectedServiceIndex = -1;
+
+  late final UpGuardianAPI _api;
+  bool _loadingServices = false;
 
   // Controllers for landing page inputs
   final TextEditingController _serviceController = TextEditingController();
@@ -62,6 +65,38 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (context) => _buildAddServiceDialog(),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _api = UpGuardianAPI();
+    _loadServices();
+  }
+
+  Future<void> _loadServices() async {
+    setState(() {
+      _loadingServices = true;
+    });
+    try {
+  final list = await _api.listServices(UpGuardianAPI.profile);
+      setState(() {
+        _services.clear();
+        _services.addAll(list);
+        _selectedServiceIndex = _services.isNotEmpty ? 0 : -1;
+      });
+    } catch (e) {
+      // show error and leave services empty
+      _showAlert('Failed to load services: $e');
+      setState(() {
+        _services.clear();
+        _selectedServiceIndex = -1;
+      });
+    } finally {
+      setState(() {
+        _loadingServices = false;
+      });
+    }
   }
 
   Widget _buildAddServiceDialog() {
@@ -108,7 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             final enteredService = _serviceController.text.trim();
             final enteredOld = _oldEndpointController.text.trim();
             final enteredNew = _newEndpointController.text.trim();
@@ -116,13 +151,21 @@ class _MyHomePageState extends State<MyHomePage> {
               _showAlert('Service name, old endpoint and new endpoint are all required.');
               return;
             }
-            setState(() {
-              _mockServices.insert(0, {'name': enteredService, 'oldEndpoint': enteredOld, 'newEndpoint': enteredNew});
-            });
-            _serviceController.clear();
-            _oldEndpointController.clear();
-            _newEndpointController.clear();
-            Navigator.of(context).pop();
+            try {
+              final navigator = Navigator.of(context);
+              final created = await _api.createService(UpGuardianAPI.profile, enteredService, enteredOld, enteredNew);
+              if (!mounted) return;
+              setState(() {
+                _services.insert(0, created);
+                _selectedServiceIndex = 0;
+              });
+              _serviceController.clear();
+              _oldEndpointController.clear();
+              _newEndpointController.clear();
+              navigator.pop();
+            } catch (e) {
+              _showAlert('Failed to create service: $e');
+            }
           },
           child: const Text('Add'),
         ),
@@ -142,7 +185,15 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             const Icon(Icons.code, size: 20),
             const SizedBox(width: 12),
-            Text('UpGuardian', style: theme.textTheme.titleLarge),
+            // show app name and active service
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('UpGuardian', style: theme.textTheme.titleLarge),
+                if (_selectedServiceIndex >= 0 && _selectedServiceIndex < _services.length)
+                  Text(_services[_selectedServiceIndex].name, style: theme.textTheme.bodySmall),
+              ],
+            ),
           ],
         ),
         actions: [
@@ -235,27 +286,55 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
-                child: _mockServices.isEmpty
-                    ? Center(child: Text('No services yet. Click "Add Service" to create one.', style: theme.textTheme.bodyLarge))
-                    : ListView.builder(
-                        itemCount: _mockServices.length,
-                        itemBuilder: (context, index) {
-                          final svc = _mockServices[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            child: ListTile(
-                              title: Text(svc['name'] ?? ''),
-                              subtitle: Text('${svc['oldEndpoint'] ?? ''} → ${svc['newEndpoint'] ?? ''}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () {
-                                  setState(() => _mockServices.removeAt(index));
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                child: _loadingServices
+                    ? const Center(child: CircularProgressIndicator())
+                    : _services.isEmpty
+                        ? Center(child: Text('No services yet. Click "Add Service" to create one.', style: theme.textTheme.bodyLarge))
+                        : ListView.builder(
+                            itemCount: _services.length,
+                            itemBuilder: (context, index) {
+                              final svc = _services[index];
+                              final isSelected = index == _selectedServiceIndex;
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                child: ListTile(
+                                  selected: isSelected,
+                                  selectedTileColor: theme.colorScheme.primary.withAlpha((0.12 * 255).round()),
+                                  title: Text(svc.name),
+                                  subtitle: Text('${svc.oldEndpoint} → ${svc.newEndpoint}'),
+                                  onTap: () => setState(() {
+                                    _selectedServiceIndex = index;
+                                  }),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () async {
+                                      final idToDelete = svc.id;
+                                      try {
+                                        await _api.deleteService(idToDelete);
+                                        if (!mounted) return;
+                                        setState(() {
+                                          final removedIndex = _services.indexWhere((s) => s.id == idToDelete);
+                                          if (removedIndex != -1) {
+                                            _services.removeAt(removedIndex);
+                                            // adjust selected index
+                                            if (_services.isEmpty) {
+                                              _selectedServiceIndex = -1;
+                                            } else if (_selectedServiceIndex >= _services.length) {
+                                              // if last item was removed, move selection to last
+                                              _selectedServiceIndex = _services.length - 1;
+                                            }
+                                          }
+                                        });
+                                      } catch (e) {
+                                        if (!mounted) return;
+                                        _showAlert('Failed to delete service: $e');
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
               ),
             ),
           ],

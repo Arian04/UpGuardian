@@ -104,3 +104,16 @@ class Service:
 
         ids = await asyncio.to_thread(_fetch)
         return [Request(self._conn, int(i)) for i in ids]
+
+    async def delete(self) -> bool:
+        """Delete this service row from the database.
+
+        Returns True if a row was deleted, False if no row existed.
+        """
+
+        def _delete():
+            cur = self._conn.execute("DELETE FROM services WHERE id = ?", (self.id,))
+            self._conn.commit()
+            return cur.rowcount > 0
+
+        return await asyncio.to_thread(_delete)

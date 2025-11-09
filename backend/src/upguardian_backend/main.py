@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import asyncio
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from jwt import PyJWKClient
 from pydantic import BaseModel
 
@@ -22,6 +23,16 @@ load_dotenv()
 # Auth0 / JWT settings (configure via environment variables)
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "")
 app: FastAPI = fastapi.FastAPI()
+
+# Allow CORS from any origin (open for development). This permits any domain to
+# access the API. For production restrict origins as needed.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Database file placed at the repository root (two parents up from this file)
 DB_PATH = Path(__file__).resolve().parents[2] / "upguardian.db"
@@ -150,6 +161,20 @@ async def put_service(service_id: str, body: dict):
     current_new = await service.get_new_endpoint()
     current_name = await service.get_name()
     return {"id": service.id, "name": current_name, "old_endpoint": current_old, "new_endpoint": current_new, "profile": service.profile}
+
+
+@app.delete("/services/{service_id}")
+async def delete_service(service_id: int):
+    """Delete a service by its integer id. Uses the Service.delete() method."""
+    db_manager: UpGuardianSQLiteDB = app.state.db_manager
+    svc = await db_manager.get_service_by_id(service_id)
+    if not svc:
+        return fastapi.responses.JSONResponse({"error": "service not found"}, status_code=404)
+
+    ok = await svc.delete()
+    if not ok:
+        return fastapi.responses.JSONResponse({"error": "not deleted"}, status_code=500)
+    return {"deleted": service_id}
 
 
 @app.post("/services/{service_id}/requests")
