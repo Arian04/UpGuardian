@@ -1,5 +1,6 @@
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:flutter/material.dart';
+import 'package:up_guardian/my_home_page.dart';
 import 'package:up_guardian/requests_page.dart';
 import 'package:up_guardian/rules_page.dart';
 import 'package:up_guardian/tab_bar_example_page.dart';
@@ -20,8 +21,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed
         (seedColor: Colors.black) ,
         useMaterial3: true),
-      home: const TabBarExamplePage(),
+      home: const MyHomePage(),
     );
   }
 }
-
