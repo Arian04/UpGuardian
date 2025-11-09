@@ -1,0 +1,20 @@
+[project]
+name = "demo-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Arian Baishya", email = "arian.baishya2004@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.121.1",
+    "uvicorn>=0.38.0",
+]
+
+[project.scripts]
+demo-backend = "demo_backend:main"
+
+[build-system]
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
