@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'api/services.dart';
+
 import 'api/database.dart';
-import 'rules_page.dart';
+import 'api/services.dart';
 import 'requests_page.dart';
+import 'rules_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -12,7 +13,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   int _selectedIndex = 1; // default to API Changes
   int _selectedChangeIndex = 0;
 
@@ -20,6 +20,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Services loaded from the API
   final List<Service> _services = [];
+
   // which service is currently active (index into _services). -1 means none selected
   int _selectedServiceIndex = -1;
 
@@ -79,7 +80,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _loadingServices = true;
     });
     try {
-  final list = await _api.listServices(UpGuardianAPI.profile);
+      final list = await _api.listServices(UpGuardianAPI.profile);
       setState(() {
         _services.clear();
         _services.addAll(list);
@@ -141,19 +142,31 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: () async {
             final enteredService = _serviceController.text.trim();
             final enteredOld = _oldEndpointController.text.trim();
             final enteredNew = _newEndpointController.text.trim();
-            if (enteredService.isEmpty || enteredOld.isEmpty || enteredNew.isEmpty) {
-              _showAlert('Service name, old endpoint and new endpoint are all required.');
+            if (enteredService.isEmpty ||
+                enteredOld.isEmpty ||
+                enteredNew.isEmpty) {
+              _showAlert(
+                'Service name, old endpoint and new endpoint are all required.',
+              );
               return;
             }
             try {
               final navigator = Navigator.of(context);
-              final created = await _api.createService(UpGuardianAPI.profile, enteredService, enteredOld, enteredNew);
+              final created = await _api.createService(
+                UpGuardianAPI.profile,
+                enteredService,
+                enteredOld,
+                enteredNew,
+              );
               if (!mounted) return;
               setState(() {
                 _services.insert(0, created);
@@ -190,8 +203,12 @@ class _MyHomePageState extends State<MyHomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('UpGuardian', style: theme.textTheme.titleLarge),
-                if (_selectedServiceIndex >= 0 && _selectedServiceIndex < _services.length)
-                  Text(_services[_selectedServiceIndex].name, style: theme.textTheme.bodySmall),
+                if (_selectedServiceIndex >= 0 &&
+                    _selectedServiceIndex < _services.length)
+                  Text(
+                    _services[_selectedServiceIndex].name,
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
             ),
           ],
@@ -229,19 +246,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 selectedIcon: Icon(Icons.science),
                 label: Text('Tests'),
               ),
-                // Existing Requests button
-                NavigationRailDestination(
-                  icon: Icon(Icons.list_alt_outlined),
-                  selectedIcon: Icon(Icons.list_alt),
-                  label: Text('Requests'),
-                ),
-                // Replace the Tests icon/title with Rules icon/title
-                NavigationRailDestination(
-                  icon: Icon(Icons.rule_outlined),
-                  selectedIcon: Icon(Icons.rule),
-                  label: Text('Rules'),
-                ),
-                // end navigation destinations
+              // Existing Requests button
+              NavigationRailDestination(
+                icon: Icon(Icons.list_alt_outlined),
+                selectedIcon: Icon(Icons.list_alt),
+                label: Text('Requests'),
+              ),
+              // Replace the Tests icon/title with Rules icon/title
+              NavigationRailDestination(
+                icon: Icon(Icons.rule_outlined),
+                selectedIcon: Icon(Icons.rule),
+                label: Text('Rules'),
+              ),
+              // end navigation destinations
             ],
           ),
 
@@ -285,56 +302,74 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: _loadingServices
                     ? const Center(child: CircularProgressIndicator())
                     : _services.isEmpty
-                        ? Center(child: Text('No services yet. Click "Add Service" to create one.', style: theme.textTheme.bodyLarge))
-                        : ListView.builder(
-                            itemCount: _services.length,
-                            itemBuilder: (context, index) {
-                              final svc = _services[index];
-                              final isSelected = index == _selectedServiceIndex;
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                                child: ListTile(
-                                  selected: isSelected,
-                                  selectedTileColor: theme.colorScheme.primary.withAlpha((0.12 * 255).round()),
-                                  title: Text(svc.name),
-                                  subtitle: Text('${svc.oldEndpoint} → ${svc.newEndpoint}'),
-                                  onTap: () => setState(() {
-                                    _selectedServiceIndex = index;
-                                  }),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () async {
-                                      final idToDelete = svc.id;
-                                      try {
-                                        await _api.deleteService(idToDelete);
-                                        if (!mounted) return;
-                                        setState(() {
-                                          final removedIndex = _services.indexWhere((s) => s.id == idToDelete);
-                                          if (removedIndex != -1) {
-                                            _services.removeAt(removedIndex);
-                                            // adjust selected index
-                                            if (_services.isEmpty) {
-                                              _selectedServiceIndex = -1;
-                                            } else if (_selectedServiceIndex >= _services.length) {
-                                              // if last item was removed, move selection to last
-                                              _selectedServiceIndex = _services.length - 1;
-                                            }
-                                          }
-                                        });
-                                      } catch (e) {
-                                        if (!mounted) return;
-                                        _showAlert('Failed to delete service: $e');
+                    ? Center(
+                        child: Text(
+                          'No services yet. Click "Add Service" to create one.',
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _services.length,
+                        itemBuilder: (context, index) {
+                          final svc = _services[index];
+                          final isSelected = index == _selectedServiceIndex;
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 6,
+                              horizontal: 4,
+                            ),
+                            child: ListTile(
+                              selected: isSelected,
+                              selectedTileColor: theme.colorScheme.primary
+                                  .withAlpha((0.12 * 255).round()),
+                              title: Text(svc.name),
+                              subtitle: Text(
+                                '${svc.oldEndpoint} → ${svc.newEndpoint}',
+                              ),
+                              onTap: () => setState(() {
+                                _selectedServiceIndex = index;
+                              }),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () async {
+                                  final idToDelete = svc.id;
+                                  try {
+                                    await _api.deleteService(idToDelete);
+                                    if (!mounted) return;
+                                    setState(() {
+                                      final removedIndex = _services.indexWhere(
+                                        (s) => s.id == idToDelete,
+                                      );
+                                      if (removedIndex != -1) {
+                                        _services.removeAt(removedIndex);
+                                        // adjust selected index
+                                        if (_services.isEmpty) {
+                                          _selectedServiceIndex = -1;
+                                        } else if (_selectedServiceIndex >=
+                                            _services.length) {
+                                          // if last item was removed, move selection to last
+                                          _selectedServiceIndex =
+                                              _services.length - 1;
+                                        }
                                       }
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                    });
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    _showAlert('Failed to delete service: $e');
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ),
           ],
@@ -347,7 +382,11 @@ class _MyHomePageState extends State<MyHomePage> {
             // action row
             Row(
               children: [
-                ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.add), label: const Text('Create Rule')),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Rule'),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -359,19 +398,46 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     flex: 2,
                     child: Container(
-                      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       padding: const EdgeInsets.all(12),
                       child: ListView.builder(
-                        itemCount: 8,
+                        itemCount: 2,
                         itemBuilder: (context, index) {
                           final isSelected = index == _selectedChangeIndex;
+
+                          String title = "";
+                          String subtitle = "";
+                          switch (index) {
+                            case 0:
+                              title = 'GET /customers';
+                              subtitle = 'Success';
+                            case 1:
+                              title = "POST /customers body={...}";
+                              subtitle = "Failed: HTTP 400";
+                          }
                           return ListTile(
                             selected: isSelected,
-                            selectedTileColor: theme.colorScheme.primary.withAlpha((0.12 * 255).round()),
-                            title: Text('Removed endpoint GET /v1/users/$index', style: TextStyle(color: textColor)),
-                            subtitle: Text('Breaking change: response schema changed', style: TextStyle(color: textColor.withAlpha((0.8 * 255).round()))),
-                            trailing: Icon(Icons.chevron_right, color: textColor),
-                            onTap: () => setState(() => _selectedChangeIndex = index),
+                            selectedTileColor: theme.colorScheme.primary
+                                .withAlpha((0.12 * 255).round()),
+                            title: Text(
+                              title,
+                              style: TextStyle(color: textColor),
+                            ),
+                            subtitle: Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: textColor.withAlpha((0.8 * 255).round()),
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: textColor,
+                            ),
+                            onTap: () =>
+                                setState(() => _selectedChangeIndex = index),
                           );
                         },
                       ),
@@ -384,9 +450,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     flex: 3,
                     child: Container(
-                      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       padding: const EdgeInsets.all(8),
-                      child: _buildChangeDetails(theme, textColor, _selectedChangeIndex),
+                      child: _buildChangeDetails(
+                        theme,
+                        textColor,
+                        'GET /customers',
+                        'Success',
+                      ),
                     ),
                   ),
                 ],
@@ -402,24 +476,59 @@ class _MyHomePageState extends State<MyHomePage> {
         return const RulesPage();
       // removed Tests view (no longer a nav destination)
       default:
-        return Center(child: Text('Unknown', style: theme.textTheme.titleLarge));
+        return Center(
+          child: Text('Unknown', style: theme.textTheme.titleLarge),
+        );
     }
   }
 
   // details panel for a selected change
-  Widget _buildChangeDetails(ThemeData theme, Color textColor, int index) {
+  Widget _buildChangeDetails(
+    ThemeData theme,
+    Color textColor,
+    String title,
+    String subtitle,
+  ) {
     // placeholder data — mirrors the list tile
-    final title = 'Removed endpoint GET /v1/users/$index';
-    final subtitle = 'Breaking change: response schema changed';
-    const oldResponse = '{\n  "id": 1,\n  "name": "Alice"\n}';
-    const newResponse = '{\n  "id": 1,\n  "fullName": "Alice Smith",\n  "active": true\n}';
+    const oldResponse = """
+    {
+        "id": "0",
+        "first_name": "john",
+        "last_name": "doe",
+        "street_address": "1111 SomePlace Lane",
+        "created_at": "2025-11-09T02:07:10.131782",
+        "last_login_at": "2025-11-09T02:07:10.131787"                                         
+    }
+    """;
+    const newResponse = """
+      {
+          "id": "0",
+          "first_name": "john",
+          "last_name": "doe",
+          "address": {
+              "street_address": "1111 SomePlace Lane",
+              "city": "dallas",
+              "zip_code": 75080,
+          },
+          "created_at": "2025-11-09T02:09:10.062655",
+          "last_login_at": "2025-11-09T02:09:10.062660",             
+      }
+    """;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: theme.textTheme.titleLarge?.copyWith(color: textColor)),
+        Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(color: textColor),
+        ),
         const SizedBox(height: 8),
-        Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: textColor.withAlpha((0.8 * 255).round()))),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: textColor.withAlpha((0.8 * 255).round()),
+          ),
+        ),
         const SizedBox(height: 12),
         Expanded(
           child: Row(
@@ -428,30 +537,56 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Old response', style: theme.textTheme.titleMedium?.copyWith(color: textColor)),
+                    Text(
+                      'Old response',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: textColor,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(8)),
-                        child: SingleChildScrollView(child: Text(oldResponse, style: const TextStyle(fontFamily: 'monospace'))),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            oldResponse,
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              // const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('New response', style: theme.textTheme.titleMedium?.copyWith(color: textColor)),
-                    const SizedBox(height: 8),
+                    Text(
+                      'New response',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: textColor,
+                      ),
+                    ),
+                    // const SizedBox(height: 8),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(8)),
-                        child: SingleChildScrollView(child: Text(newResponse, style: const TextStyle(fontFamily: 'monospace'))),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            newResponse,
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -480,8 +615,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Validation successful'),
-                    content: const Text('Both old and new responses are valid JSON.'),
-                    actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                    content: const Text(
+                      'Both old and new responses are valid JSON.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('OK'),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -489,13 +631,20 @@ class _MyHomePageState extends State<MyHomePage> {
               label: const Text('Validate JSON'),
             ),
             const SizedBox(width: 12),
-            ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.check), label: const Text('Accept change')),
+            ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.check),
+              label: const Text('Accept change'),
+            ),
             const SizedBox(width: 12),
-            OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.close), label: const Text('Ignore')),
+            OutlinedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.close),
+              label: const Text('Ignore'),
+            ),
           ],
         ),
       ],
     );
   }
 }
-
