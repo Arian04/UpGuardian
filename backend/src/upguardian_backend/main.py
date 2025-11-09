@@ -1,14 +1,17 @@
+import logging
+
 import fastapi
 import sqlite3
 from pathlib import Path
 import os
 
+import httpx
 from dotenv import load_dotenv
 import asyncio
-from typing import Optional
 
 from fastapi import FastAPI
 from jwt import PyJWKClient
+from pydantic import BaseModel
 
 from .db import UpGuardianSQLiteDB
 from .service import Service
@@ -215,3 +218,52 @@ async def list_service_requests(service: int):
     reqs = await svc.list_requests()
     results = await asyncio.gather(*[r.to_dict() for r in reqs])
     return list(results)
+
+class TestRequest(BaseModel):
+    method: str
+    data: dict
+
+class TestResponse(BaseModel):
+    service1_responses: list[bytes]
+    service2_responses: list[bytes]
+
+@app.put("/run/{service_id}")
+async def run_tests(service_id: int):
+    db_manager: UpGuardianSQLiteDB = app.state.db_manager
+    service = await db_manager.get_service_by_id(service_id)
+    if not service:
+        return fastapi.responses.JSONResponse({"error": "service not found"}, status_code=404)
+
+    requests = await service.list_requests()
+
+    responses_1 = []
+    responses_2 = []
+    for request in requests:
+        service_endpoint1 = await service.get_old_endpoint()
+        service_endpoint2 = await service.get_new_endpoint()
+        request_endpoint = await request.get_endpoint()
+        request_data = await request.get_body()
+
+        logging.error(service_endpoint1 + request_endpoint)
+        logging.error(service_endpoint2 + request_endpoint)
+        logging.error(request_data)
+
+        response1 = httpx.request(
+            method=await request.get_method(),
+            url=service_endpoint1 + request_endpoint,
+            data=request_data,
+        ).json()
+
+        response2 = httpx.request(
+            method=await request.get_method(),
+            url=service_endpoint2 + request_endpoint,
+            data=request_data,
+        ).json()
+
+        responses_1.append(response1)
+        responses_2.append(response2)
+
+    return {
+        "service1_responses": responses_1,
+        "service2_responses": responses_2,
+    }
