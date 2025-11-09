@@ -15,3 +15,26 @@ class RulesPage extends StatelessWidget {
     );
   }
 }
+
+// Define a custom Form widget.
+class MyCustomForm extends StatefulWidget {
+  const MyCustomForm({super.key});
+
+  @override
+  State<MyCustomForm> createState() => _MyCustomFormState();
+}
+
+class _MyCustomFormState extends State<MyCustomForm> {
+  final rulesInput = TextEditingController();
+
+  @override
+  void dispose() {
+    rulesInput.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(controller: rulesInput);
+  }
+}

@@ -1,0 +1,1 @@
+Customer now has an additional property "middle_name"

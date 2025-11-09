@@ -1,0 +1,1 @@
+Warning: There's a lot of duplicated code between the variations of `customers.py` in the subdirectories under here.

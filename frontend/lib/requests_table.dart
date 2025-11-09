@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
 
-/// A page that shows a scalable 3-column table (Endpoint, Method, Body).
+/// Replacement requests table with validation and missing-fields dialog.
 ///
-/// - Each row contains three editable fields (TextFields).
-/// - Pressing Enter (submit) on any field will "save" that row: the values
-///   are stored and the row becomes read-only text.
-/// - The "+" button adds another editable row to the table.
-/// - All saved rows' values are kept in `savedRequests` as maps and each row's
-///   controllers are kept in `rows` while editing.
+/// This file is intentionally separate so `requests_page.dart` remains untouched.
 
-class RequestsPage extends StatefulWidget {
-  const RequestsPage({super.key});
+class RequestsTablePage extends StatefulWidget {
+  const RequestsTablePage({super.key});
 
   @override
-  State<RequestsPage> createState() => _RequestsPageState();
+  State<RequestsTablePage> createState() => _RequestsTablePageState();
 }
 
-class _RequestRow {
-  TextEditingController endpointController;
-  TextEditingController methodController;
-  TextEditingController bodyController;
+class _RequestRowData {
+  final TextEditingController endpointController;
+  final TextEditingController methodController;
+  final TextEditingController bodyController;
   bool saved = false;
 
-  _RequestRow({String endpoint = '', String method = '', String body = ''})
+  _RequestRowData({String endpoint = '', String method = '', String body = ''})
       : endpointController = TextEditingController(text: endpoint),
         methodController = TextEditingController(text: method),
         bodyController = TextEditingController(text: body);
@@ -40,33 +35,25 @@ class _RequestRow {
   }
 }
 
-class _RequestsPageState extends State<RequestsPage> {
-  // dynamic list of editable rows (controllers live here)
-  final List<_RequestRow> rows = [];
-
-  // saved requests: each entry is a map with keys: endpoint, method, body
+class _RequestsTablePageState extends State<RequestsTablePage> {
+  final List<_RequestRowData> rows = [];
   final List<Map<String, String>> savedRequests = [];
 
   @override
   void initState() {
     super.initState();
-    // start with a single editable row
-    rows.add(_RequestRow());
+    rows.add(_RequestRowData());
   }
 
-  @override
-  void dispose() {
-    for (final r in rows) {
-      r.dispose();
-    }
-    super.dispose();
+@override
+void dispose() {
+  for (final r in rows) {
+    r.dispose();
   }
+  super.dispose();
+}
 
-  void addRow() {
-    setState(() {
-      rows.add(_RequestRow());
-    });
-  }
+  void addRow() => setState(() => rows.add(_RequestRowData()));
 
   void saveRow(int index) {
     final row = rows[index];
@@ -86,6 +73,23 @@ class _RequestsPageState extends State<RequestsPage> {
     });
   }
 
+  void removeRow(int index) {
+    if (index < 0 || index >= rows.length) return;
+    final row = rows[index];
+    final wasSaved = row.saved;
+    final values = row.values();
+    row.dispose();
+    setState(() {
+      rows.removeAt(index);
+      if (wasSaved) {
+        final found = savedRequests.indexWhere((m) =>
+            m['endpoint'] == values['endpoint'] && m['method'] == values['method'] && m['body'] == values['body']);
+        if (found != -1) savedRequests.removeAt(found);
+      }
+      if (rows.isEmpty) rows.add(_RequestRowData());
+    });
+  }
+
   void _showMissingFieldsDialog(List<String> missing) {
     final names = missing.join(', ');
     showDialog<void>(
@@ -100,33 +104,10 @@ class _RequestsPageState extends State<RequestsPage> {
     );
   }
 
-  void removeRow(int index) {
-    if (index < 0 || index >= rows.length) return;
-    final row = rows[index];
-    final wasSaved = row.saved;
-    final values = row.values();
-    // Dispose controllers for that row
-    row.dispose();
-    setState(() {
-      rows.removeAt(index);
-      if (wasSaved) {
-        // remove first matching saved request (match by values)
-        final found = savedRequests.indexWhere((m) =>
-            m['endpoint'] == values['endpoint'] && m['method'] == values['method'] && m['body'] == values['body']);
-        if (found != -1) savedRequests.removeAt(found);
-      }
-      // keep at least one editable row so UI stays usable
-      if (rows.isEmpty) rows.add(_RequestRow());
-    });
-  }
-  // (Only removeRow exists now — it deletes both the row and the saved request if present.)
-
-  Widget _buildHeader() {
-    return Container(
-      color: Colors.black12,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: Row(
-        children: const [
+  Widget _header() => Container(
+        color: Colors.black12,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Row(children: const [
           Expanded(flex: 3, child: Text('Endpoint', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
           Expanded(flex: 2, child: Text('Method', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -134,14 +115,11 @@ class _RequestsPageState extends State<RequestsPage> {
           Expanded(flex: 4, child: Text('Body', style: TextStyle(fontWeight: FontWeight.bold))),
           SizedBox(width: 12),
           SizedBox(width: 40, child: Center(child: Text(''))),
-        ],
-      ),
-    );
-  }
+        ]),
+      );
 
   Widget _buildRow(int index) {
     final r = rows[index];
-    // If saved, show text; otherwise show TextFields
     if (r.saved) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -165,7 +143,6 @@ class _RequestsPageState extends State<RequestsPage> {
       );
     }
 
-    // editable
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
@@ -216,18 +193,16 @@ class _RequestsPageState extends State<RequestsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: rows.length,
-                itemBuilder: (_, i) => _buildRow(i),
-              ),
+        child: Column(children: [
+          _header(),
+          Expanded(
+            child: ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (_, i) => _buildRow(i),
             ),
-            // banner removed: only FAB remains at bottom
-          ],
-        ),
+          ),
+          // banner removed: only FAB remains at bottom
+        ]),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: addRow,
