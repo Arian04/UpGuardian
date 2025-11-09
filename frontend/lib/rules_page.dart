@@ -22,6 +22,18 @@ class RulesPage extends StatefulWidget {
     }
   }
 
+  /// Returns null when `jsonString` is valid JSON (object or array).
+  /// Otherwise returns a short error message describing the parse error.
+  static String? jsonValidationError(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is Map<String, dynamic> || decoded is List<dynamic>) return null;
+      return 'JSON must be an object or an array.';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   @override
   State<RulesPage> createState() => _RulesPageState();
 }

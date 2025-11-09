@@ -14,11 +14,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 1; // default to API Changes
   int _selectedChangeIndex = 0;
 
-  final _repos = const [
-    'arian04/upguardian',
-    'example/repo',
-  ];
-  String _selectedRepo = 'arian04/upguardian';
+  // repository list removed (not used)
 
   // Controllers for landing page inputs
   final TextEditingController _serviceController = TextEditingController();
@@ -327,6 +323,32 @@ class _MyHomePageState extends State<MyHomePage> {
         const SizedBox(height: 12),
         Row(
           children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                // Validate both old and new responses
+                final oldErr = RulesPage.jsonValidationError(oldResponse);
+                final newErr = RulesPage.jsonValidationError(newResponse);
+                if (oldErr != null || newErr != null) {
+                  final parts = <String>[];
+                  if (oldErr != null) parts.add('Old response error: $oldErr');
+                  if (newErr != null) parts.add('New response error: $newErr');
+                  _showAlert(parts.join('\n'));
+                  return;
+                }
+                // both valid
+                showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Validation successful'),
+                    content: const Text('Both old and new responses are valid JSON.'),
+                    actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Validate JSON'),
+            ),
+            const SizedBox(width: 12),
             ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.check), label: const Text('Accept change')),
             const SizedBox(width: 12),
             OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.close), label: const Text('Ignore')),
