@@ -10,6 +10,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
   int _selectedIndex = 1; // default to API Changes
   int _selectedChangeIndex = 0;
 
@@ -18,6 +19,43 @@ class _MyHomePageState extends State<MyHomePage> {
     'example/repo',
   ];
   String _selectedRepo = 'arian04/upguardian';
+
+  // Controllers for landing page inputs
+  final TextEditingController _oldServiceController = TextEditingController();
+  final TextEditingController _oldEndpointController = TextEditingController();
+  final TextEditingController _newServiceController = TextEditingController();
+  final TextEditingController _newEndpointController = TextEditingController();
+
+  // Temporary variables to store input
+  String oldService = '';
+  String oldEndpoint = '';
+  String newService = '';
+  String newEndpoint = '';
+
+  @override
+  void dispose() {
+    _oldServiceController.dispose();
+    _oldEndpointController.dispose();
+    _newServiceController.dispose();
+    _newEndpointController.dispose();
+    super.dispose();
+  }
+
+  void _showAlert(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Input Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +142,81 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildMainContent(ThemeData theme, Color textColor, Color surface) {
     switch (_selectedIndex) {
       case 0:
-        return Center(child: Text('Overview', style: theme.textTheme.titleLarge));
+        // Landing page: input for old/new service and endpoint
+        final inputStyle = theme.textTheme.bodyLarge?.copyWith(color: textColor);
+        return Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('API Change Landing', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 18),
+                Text('Old Service', style: inputStyle),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _oldServiceController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter old service name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Old Endpoint', style: inputStyle),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _oldEndpointController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter old endpoint (e.g. /v1/users)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text('New Service', style: inputStyle),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _newServiceController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter new service name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('New Endpoint', style: inputStyle),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _newEndpointController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter new endpoint (e.g. /v2/users)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    oldService = _oldServiceController.text.trim();
+                    oldEndpoint = _oldEndpointController.text.trim();
+                    newService = _newServiceController.text.trim();
+                    newEndpoint = _newEndpointController.text.trim();
+                    if (oldService.isEmpty || oldEndpoint.isEmpty || newService.isEmpty || newEndpoint.isEmpty) {
+                      _showAlert('All fields are required. Please fill out every field.');
+                      return;
+                    }
+                    // You can use the variables here for further logic
+                  },
+                  child: const Text('Submit'),
+                ),
+              ],
+            ),
+          ),
+        );
       case 1:
         // simplified API Changes view (keeps repo selector and a change list)
         return Column(
