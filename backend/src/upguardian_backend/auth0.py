@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError, PyJWKClient
 from starlette import status
 
-from main import app, AUTH0_DOMAIN
+from .main import app, AUTH0_DOMAIN
 
 API_AUDIENCE = os.getenv("API_AUDIENCE", "")
 ALGORITHMS = ["RS256"]
