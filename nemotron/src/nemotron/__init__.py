@@ -22,20 +22,6 @@ class OutputSchemaResponse(BaseModel):
 def main():
     json_schema = OutputSchemaResponse.model_json_schema()
 
-    # prompt = ("Compare the following two responses from two different versions of the same API server to an identical request."
-    #           "Highlight important breaking changes, while ignoring unimportant differences.\n"
-    #           "Return a map of properties with issues to descriptions of their issues.")
-
-    # prompt = (
-    #     "You are a developer checking for breaking changes after upgrading an API server. Using the following API responses from different versions of the same API server, when provided an identical request, concisely list breaking changes"
-    #     "between the versions of the API server, and which keys are involved. Ignore unimportant changes that don't break the schema or introduce logical issues."
-    # )
-
-    # prompt = (
-    #     "You are a developer checking for breaking changes after upgrading an API server. Compare the following API responses from different versions of the same API server."
-    #     'List which keys do not indicate breaking changes, as JSON in the form of {"unimportant_keys": ["key1", "key2"]}'
-    # )
-
     prompt = (
         "You are a developer checking for breaking changes after upgrading an API server. Compare the following API responses from different versions of the same API server."
         "List which keys do not indicate breaking changes."
