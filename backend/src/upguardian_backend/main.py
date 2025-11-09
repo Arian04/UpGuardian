@@ -1,3 +1,4 @@
+import json
 
 import fastapi
 import sqlite3
@@ -13,6 +14,7 @@ from jwt import PyJWKClient
 from pydantic import BaseModel
 
 from .db import UpGuardianSQLiteDB
+from .nemotron import get_unimportant_keys_nemotron
 from .service import Service
 
 load_dotenv()
@@ -245,6 +247,7 @@ async def run_tests_helper(service_id: int, db_manager: UpGuardianSQLiteDB):
 
     responses_1 = []
     responses_2 = []
+    response_statuses: list[bool] = []
     for request in requests:
         service_endpoint1 = await service.get_old_endpoint()
         service_endpoint2 = await service.get_new_endpoint()
@@ -266,7 +269,27 @@ async def run_tests_helper(service_id: int, db_manager: UpGuardianSQLiteDB):
         responses_1.append(response1)
         responses_2.append(response2)
 
+        response_statuses.append(analyze_responses(response1, response2))
+
     return {
         "service1_responses": responses_1,
         "service2_responses": responses_2,
+        "response_statuses": response_statuses,
     }
+
+def analyze_responses(response1: dict, response2: dict) -> bool:
+    if response1 == response2:
+        return True
+
+    unimportant_keys = json.loads(get_unimportant_keys_nemotron())["unimportant_keys"]
+    for key in unimportant_keys:
+        if key in response1:
+            del response1[key]
+
+        if key in response2:
+            del response2[key]
+
+    if response1 == response2:
+        return True
+
+    return False

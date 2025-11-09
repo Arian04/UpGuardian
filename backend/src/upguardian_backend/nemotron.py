@@ -19,7 +19,7 @@ class OutputSchemaResponse(BaseModel):
     unimportant_keys: list[str]
 
 
-def main():
+def get_unimportant_keys_nemotron():
     json_schema = OutputSchemaResponse.model_json_schema()
 
     prompt = (
@@ -87,5 +87,4 @@ def main():
         stream=False
     )
 
-    assistant_message = response.choices[0].message.content
-    print(assistant_message)
+    return response.choices[0].message.content
